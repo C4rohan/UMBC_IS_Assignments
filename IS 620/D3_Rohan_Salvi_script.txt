@@ -1,0 +1,181 @@
+-- drop tables ,procedures,sequence
+drop table customer cascade constraints;
+drop table orders;
+drop procedure insertcustomerID;
+drop sequence customerID_seq;
+drop sequence orderID_seq;
+
+--create table customer
+create table customer(customer_ID varchar(10) primary key, name varchar(25),email varchar2(25),street_address varchar2(20),city varchar2(20),c_state varchar2(20), zip number(6),credit_card number(16));
+
+
+--create sequence
+create sequence customerID_seq start with 901;
+
+
+--create procedure for inserting values into table
+create or replace procedure insertcustomerID(
+cs_name in customer.name%type,
+email in customer.email%type,
+street_address in customer.street_address%type,
+city in customer.city%type,
+state in customer.c_state%type,
+zip in customer.zip%TYPE,
+cc in customer.credit_card%type)
+is
+begin
+insert into customer(customer_ID,name,email,street_address,city,c_state,zip,credit_card) 
+values(customerID_seq.nextval,cs_name,email,street_address,city,state,zip,cc);
+exception
+ when no_data_found then
+ dbms_output.put_line('Need value for customer');
+ when others then 
+ dbms_output.put_line('Add the value in order ');
+ commit;
+end;
+/
+
+
+
+-- inserting values
+exec insertcustomerID('Cust1','billu@umbc.edu','5003 westland','Baltimore','MD',21045,1234123412341234)
+exec insertcustomerID('Cust11','Cust11@umbc.edu','Maiden Choice','Baltimore','MD',21045,0987098709870987)
+exec insertcustomerID('Cust3','Cust3@umbc.edu','Back Market','Baltimore','MD',21046,0987098709870987)
+exec insertcustomerID('Cust111','Cust111@umbc.edu','Eldon Street','Baltimore','MD',21045,1234123412341234)
+exec insertcustomerID('CustNY1','CustNY1@umbc.edu','Gopal Marg','New York','NY',10045,1234123412341037)
+exec insertcustomerID('CustNY2','CustNY2@umbc.edu','Brown Street','New York','NY',10045,1234123412347090)
+exec insertcustomerID('CustNY3','CustNY3@umbc.edu','Malibu Street','New York','NY',10045,1234123412341000)
+exec insertcustomerID('CustPA1','CustPA1@umbc.edu','Marc Street','Philedelphia','PA',16822,1234123412341234)
+exec insertcustomerID('CustPA2','CustPA2@umbc.edu','Belwood Street','Philedelphia','PA',16822,1234123412341234)
+exec insertcustomerID('CustPA3','CustPA3@umbc.edu','Gabbar Street','Philedelphia','PA',16822,1234123412341234)
+
+
+
+----------------- order table
+create table orders(
+    order_id int primary key,
+    restaurant_id int,
+    customer_id varchar2(10),
+    menu_item_id int,
+    waiter_id int,
+    order_date date,
+    amount_paid number(5,2),
+    tip number(5,2),
+    foreign key(customer_id) references customer(customer_id)
+);
+
+---------------- create Sequence for order
+create sequence orderID_seq start with 852645;
+
+
+---------------- insertorders
+create or replace procedure insertorders(r_id in int, c_id in int, m_id in int, w_id in int, o_date in date, o_amount in number)
+is
+begin
+insert into orders values (orderID_seq.nextval, r_id, c_id, m_id,
+w_id, o_date, o_amount, o_amount*0.2);
+exception
+    when no_data_found then 
+    dbms_output.put_line('No such values');
+    when others then
+    dbms_output.put_line('Add the values in the order');
+end; 
+/
+
+
+----- Inserting Dummy data into orders
+exec insertorders(1000, 901, 6001, 51, date '2020-01-05', 522.23);
+exec insertorders(2000,  902, 6001, 52, date '2020-01-06', 120.25);
+exec insertorders(4000, 903, 6002, 51, date '2020-01-06', 45);
+exec insertorders(2000, 904, 6003, 53, date '2020-02-07', 87);
+exec insertorders(1000, 904, 6006, 51, date '2020-02-08', 99.71);
+exec insertorders(4000, 905, 6004, 52, date '2020-03-25', 45.32);
+exec insertorders(2000, 906, 6010, 55, date '2020-03-29', 20);
+exec insertorders(1000, 902, 6001, 57, date '2020-04-10', 66.33);
+exec insertorders(3000, 907, 6022, 59, date '2020-04-11', 78.45);
+exec insertorders(1000, 909, 6001, 52, date '2020-04-15', 96.21);
+exec insertorders(4000, 901, 6010, 56, date '2020-04-16', 81.55);
+exec insertorders(2000, 903, 6009, 55, date '2020-04-16', 93.21);
+exec insertorders(1000, 909, 6004, 53, date '2020-04-16', 77);
+exec insertorders(1000, 904, 6006, 58, date '2020-04-15', 60);
+exec insertorders(2000, 910, 6022, 57, date '2020-04-15', 70);
+exec insertorders(3000, 909, 6024, 56, date '2020-04-20', 59.45);
+exec insertorders(3000, 901, 6003, 52, date '2020-05-04', 185.03);
+
+-- report of Most(top 3) and least(bottom 3) money spent
+create or replace procedure report_Most_least_money
+is
+cursor c1 is select c.name,o.amount_paid from customer c join orders o on o.customer_ID=c.customer_ID 
+    where o.amount_paid >=(select max(o.amount_paid) from orders o
+    where o.amount_paid < (select max(o.amount_paid) from orders o
+    where o.amount_paid < (select max(o.amount_paid) from orders o))) and rownum<=3  
+    order by o.amount_paid desc ;
+
+cursor c2 is select c.name,o.amount_paid from customer c join orders o on o.customer_ID=c.customer_ID 
+    where o.amount_paid >=(select max(o.amount_paid) from orders o
+    where o.amount_paid < (select max(o.amount_paid) from orders o
+    where o.amount_paid < (select max(o.amount_paid) from orders o))) and rownum<=3  
+    order by o.amount_paid asc ;
+ 
+c_name varchar(30);
+c_amount_paid number;
+cs_name varchar(30);
+cs_amount_paid number;
+
+begin
+open c1;
+open c2;
+dbms_output.put_line('Customers who Spent the most:');
+loop 
+    fetch c1 into c_name,c_amount_paid;
+    exit when c1%notfound;
+    
+    dbms_output.put_line(c_name || ' '||c_amount_paid||'');
+   
+end loop;
+dbms_output.put_line('Customers who Spent the Least:');
+loop
+ fetch c2 into cs_name,cs_amount_paid;
+    exit when c2%notfound;
+    
+    dbms_output.put_line(cs_name || ' '||cs_amount_paid||'');
+end loop;
+
+end;
+/
+
+
+set serveroutput on;
+exec report_Most_least_money
+
+
+-- States of generous customers. 
+
+create or replace procedure report_state_of_genrous_cs
+is
+cursor c3 is select c.c_state ,sum(o.amount_paid) as amount 
+from customer c join orders o on o.customer_ID=c.customer_ID 
+ group by c.c_state order by sum(o.amount_paid) desc;
+ 
+c_state varchar(30);
+c_amount_paid number;
+
+begin
+open c3;
+dbms_output.put_line('States of generous customers:');
+loop 
+    fetch c3 into c_state,c_amount_paid;
+    exit when c3%notfound;
+    
+    dbms_output.put_line(c_state || ' '||c_amount_paid||'');
+   
+end loop;
+
+end;
+/
+
+exec report_state_of_genrous_cs
+
+
+ 
+ 

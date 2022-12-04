@@ -1,0 +1,57 @@
+-- drop tables ,procedures,sequence
+drop table customer cascade constraints;
+drop procedure insertcustomerID;
+drop sequence customerID_seq;
+
+--create table customer
+create table customer(customer_ID varchar(10) primary key, name varchar(25),email varchar2(25),street_address varchar2(20),city varchar2(20), zip number(6),credit_card number(16));
+
+--create sequence
+create sequence customerID_seq start with 901;
+
+set serveroutput on;
+
+--create procedure for inserting values into table
+create or replace procedure insertcustomerID(
+cs_name in customer.name%type,
+email in customer.email%type,
+street_address in customer.street_address%type,
+city in customer.city%type,
+zip in customer.zip%TYPE,
+cc in customer.credit_card%type)
+is
+begin
+insert into customer(customer_ID,name,email,street_address,city,zip,credit_card) values(customerID_seq.nextval,cs_name,email,street_address,city,zip,cc);
+exception
+ when no_data_found then
+ dbms_output.put_line('Need value for customer');
+ when others then 
+ dbms_output.put_line('Add the value in order ');
+ commit;
+end;
+/
+
+-- inserting values
+exec insertcustomerID('Cust1','billu@umbc.edu','5003 westland','Baltimore',21045,1234123412341234)
+exec insertcustomerID('Cust11','Cust11@umbc.edu','Maiden Choice','Baltimore',21045,0987098709870987)
+exec insertcustomerID('Cust3','Cust3@umbc.edu','Back Market','Baltimore',21046,0987098709870987)
+exec insertcustomerID('Cust111','Cust111@umbc.edu','Eldon Street','Baltimore',21045,1234123412341234)
+
+-- View the name of customer in a given zip
+select name from customer where zip=21045;
+
+-- function Helper_ID for customer_ID
+set serveroutput on;
+create or replace function find_customer_id(cs_name in customer.name%type)
+return number
+is
+cs_id number;
+begin
+select customer_ID into cs_id from customer where name =cs_name; 
+return cs_id;
+exception
+when no_data_found then
+dbms_output.put_line('no such customer');
+end;
+/
+

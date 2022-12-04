@@ -1,0 +1,131 @@
+
+-- Restaurant table
+
+create table restaurant(rID int primary key, rName varchar(50),StrAddress varchar2(50),zip int);
+
+--Driver table
+
+create table driver(dID int primary key, dFname varchar(50),dLname varchar(50));
+
+--Customer Table
+
+create table customers(cID int primary key, dFname varchar(50),cLname varchar(50), StrAddress varchar2(50),zip int );
+
+--Order Table
+
+create table orders(oID int primary key, rID int ,cID int, dID int, foreign key(rID) references restaurant(rID),foreign key (cID) references customers(cID), foreign key (dID) references  driver(dID), amount number(5)); 
+
+
+--2a. inserting values for restaurant
+insert all into restaurant(rID,rName,StrAddress,zip) values(1000,'Good Food', ' 100 Main St', 21250)
+into restaurant(rID,rName,StrAddress,zip) values(2000,'Happy Belly','101 Main St',21043)
+into restaurant(rID,rName,StrAddress,zip) values(3000,'Little Italy','200 Plum St',21250)
+into restaurant(rID,rName,StrAddress,zip) values(4000,'American','210 Plum St',21250)
+select * from dual;
+
+--2b. inserting values for driver
+
+insert all into driver(dID,dFName,dLname) values(100,'Jack',' Quick')
+into driver(dID,dFName,dLname) values(101,'Joe', 'Tracy')
+into driver(dID,dFName,dLname) values(102,'Marie', 'Mac')
+into driver(dID,dFName,dLname) values(103,'Pam', 'Bam')
+into driver(dID,dFName,dLname) values(105,'Kumar', 'Raut')
+select * from dual;
+
+--2c. inserting values for customer
+
+insert all into customers(cID,dFname,cLname,StrAddress,zip) values(500, 'Mary', ' Slim', '10 Main St', 21043)
+into customers(cID,dFname,cLname,StrAddress,zip) values(510, 'Jude', 'Bigbell ' , '20 Plenty St',21042)
+into customers(cID,dFname,cLname,StrAddress,zip) values(520, 'Pamela', ' Reddy' , '20 Main St',21043)
+into customers(cID,dFname,cLname,StrAddress,zip) values(530, 'Ann', ' Phat', '101 Main St',21250)
+select * from dual;
+
+--2d. inserting values in orders
+
+Insert into orders(oID,amount,rID,cID,dID) select 700,72.80,r.rID,c.cID,d.dID from restaurant r, customers c, driver d where r.rID=1000 and c.dFname='Mary' and d.dFname='Jack'; 
+Insert into orders(oID,amount,rID,cID,dID) select 701,99,r.rID,c.cID,d.dID from restaurant r, customers c, driver d where r.rID=1000 and c.dFname='Jude' and d.dFname='Marie'; 
+Insert into orders(oID,amount,rID,cID,dID) select 702,150.60,r.rID,c.cID,d.dID from restaurant r, customers c, driver d where r.rID=1000 and c.dFname='Ann' and d.dFname='Pam'; 
+Insert into orders(oID,amount,rID,cID,dID) select 703,80,r.rID,c.cID,d.dID from restaurant r, customers c, driver d where r.rID=2000 and c.dFname='Ann' and d.dFname='Kumar'; 
+Insert into orders(oID,amount,rID,cID,dID) select 704,90,r.rID,c.cID,d.dID from restaurant r, customers c, driver d where r.rID=3000 and c.dFname='Ann' and d.dFname='Marie';
+Insert into orders(oID,amount,rID,cID,dID) select 705,100,r.rID,c.cID,d.dID from restaurant r, customers c, driver d where r.rID=4000 and c.dFname='Pamela' and d.dFname='Joe'; 
+Insert into orders(oID,amount,rID,cID,dID) select 706,134,r.rID,c.cID,d.dID from restaurant r, customers c, driver d where r.rID=4000 and c.dFname='Jude' and d.dFname='Jack'; 
+Insert into orders(oID,amount,rID,cID,dID) select 707,66.20,r.rID,c.cID,d.dID from restaurant r, customers c, driver d where r.rID=4000 and c.dFname='Ann' and d.dFname='Jack'; 
+
+
+-- Tips table
+create sequence seq_pid start with 1 increment by 1 nocache nocycle ;
+
+create table tips as select seq_pid.nextval as tpid ,o.oID as oID ,o.dID as dID ,(o.amount*20)/100 as tip from orders o;
+
+ALTER TABLE tips
+ADD PRIMARY KEY (tpid);
+
+
+-- ORDERS_AT_RESTAURANT 
+
+create or replace procedure orders_at_restaurant(name_in IN varchar2)
+is
+rs_oid number;
+rs_amount number;
+rs_Fname varchar2(15);
+rs_Lname varchar2(15);
+cursor c4 is select o.oid,o.amount,d.dfname as F_Name,d.dlname as L_Name from orders o, driver d,restaurant r 
+where r.rname=name_in and d.did=o.did and r.rid=o.rid;
+
+begin
+open c4;
+loop 
+   
+    fetch c4 into rs_oid,rs_amount,rs_Fname,rs_Lname;
+    if c4%notfound then
+   dbms_output.put_line('Not found');
+    exit when c4%notfound;
+    
+    else
+    dbms_output.put_line(rs_oid || ' '||rs_amount|| ' ' ||rs_Fname|| ' ' ||rs_Lname);
+    
+    end if;
+end loop;
+dbms_output.put_line('the sum of all orders: '||c4%rowcount);
+close c4;
+end;
+/
+
+set serveroutput on;
+exec orders_at_restaurant('Good Food')
+exec orders_at_restaurant('American')
+exec orders_at_restaurant('Americane')
+
+-- procedure Profit REPORT
+create or replace procedure profit_report
+is
+cursor c1 is select r.rname,sum(o.amount-t.tip) from restaurant r,orders o,tips t where o.rid=r.rid and o.oid= t.oid group by r.rname;
+r_rname varchar(30);
+r_Profit number(5);
+begin
+open c1;
+dbms_output.put_line('Profit of restaurants:');
+loop 
+    fetch c1 into r_rname,r_Profit;
+    exit when c1%notfound;
+    
+    dbms_output.put_line(r_rname || ' '||r_Profit||'');
+   
+end loop;
+
+end;
+/
+
+
+set serveroutput on;
+exec profit_report
+
+
+--Drop table
+drop table restaurant cascade constraints;
+drop table orders cascade constraints;
+drop table driver cascade constraints;
+drop table customers cascade constraints;
+drop table tips cascade constraints;
+drop sequence seq_pid;
+
